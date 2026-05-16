@@ -1,0 +1,7 @@
+id=magisk_modulo_teste
+name=Magisk Módulo Teste
+version=v1.0
+versionCode=1
+author=yfirididisis
+description=Teste de módulo Magisk
+minMagisk=20000
