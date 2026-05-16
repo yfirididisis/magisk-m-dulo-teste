@@ -1,9 +1,1 @@
 #MAGISK
-
-# This is a placeholder updater-script
-
-ui_print "*******************************";
-ui_print "     Magisk Module Test";
-ui_print "*******************************";
-
-# Add your installation script here
