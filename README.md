@@ -1,2 +1,3 @@
-# magisk-m-dulo-teste
-Repositório de teste para módulo Magisk
+# Magisk Módulo Teste
+
+Módulo com suporte a Spectrum e KernelSU
