@@ -1,0 +1,10 @@
+{
+  "name": "no limite infinito",
+  "author": "hg",
+  "profiles": {
+    "balance": "Balance",
+    "performance": "Performance",
+    "battery": "Battery",
+    "gaming": "Gaming"
+  }
+}
