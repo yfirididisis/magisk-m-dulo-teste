@@ -5,3 +5,4 @@ versionCode=1
 author=Ggggh
 description=Módulo de teste para Magisk
 minMagisk=2800
+spectrum.support=1
