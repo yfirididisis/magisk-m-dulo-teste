@@ -1,0 +1,537 @@
+#!/system/bin/sh
+# EAS
+# 请不要假设你的模块位于何处
+# 如果你需要知道该脚本的位置, 或是该模块的位置, 请始终使用 $MODDIR 变量获取
+# 这样做可以保证将来如果 Magisk 更改了挂载点, 你的模块仍然可以正常工作
+MODDIR=${0%/*}
+
+# 该脚本会在 late_start 服务模式下执行
+
+# Spectrum Support
+setprop persist.spectrum.kernel "authority"
+setprop spectrum.support 1
+# Enable Vibration on Battery Saver
+settings put global battery_saver_constants "vibration_disabled=false"
+
+cpu_freq0=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq)
+gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)
+
+function write() {
+    # write & lock it
+    chmod 0666 $1
+    echo -n $2 > $1
+    chmod 0444 $1
+}
+
+boot_run_once=false
+spectrum_mode=$(getprop persist.spectrum.profile)
+[ -z "$spectrum_mode" ] && setprop persist.spectrum.profile 0
+
+# Waiting for some boot scripts to execute
+sleep 15
+
+# Tweak configuration By yc9559
+# Source: https://github.com/yc9559/wipe-v2
+
+while true; do
+    sleep 3
+    if $boot_run_once; then
+        [ "$(getprop persist.spectrum.profile)" == "$spectrum_mode" ] && continue
+    else
+        boot_run_once=true
+    fi
+    spectrum_mode=$(getprop persist.spectrum.profile)
+    case "$spectrum_mode" in
+        # Balance
+        "0") {
+            chmod 0644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+            if [ $gov == "schedutil" ];  then 
+	            echo "schedutil" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+	            echo "2000" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us
+                echo "2000" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us
+                echo "0" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "alucardsched" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+                echo "3000" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/up_rate_limit_us
+                echo "2000" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/down_rate_limit_us
+                echo "902400" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/freq_responsiveness
+                echo "5" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/boost_perc
+            fi
+            if [ $cpu_freq0 == "633600" ];  then 
+	            echo "1747200" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+            else 
+	            echo "1612800" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+            fi;
+            echo "902400" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+            chmod 0644 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+            if [ $gov == "schedutil" ];  then 
+	            echo "schedutil" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+	            echo "2000" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/up_rate_limit_us
+                echo "2000" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/down_rate_limit_us
+                echo "0" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "alucardsched" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+                echo "3000" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/up_rate_limit_us
+                echo "2000" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/down_rate_limit_us
+                echo "1113600" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/freq_responsiveness
+                echo "5" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/boost_perc
+            fi
+            if [ $cpu_freq0 == "633600" ];  then 
+	            echo "1747200" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+            else 
+	            echo "1612800" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+            fi;
+            echo "902400" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+            echo "1113600" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+            echo "1747200" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+            echo "1401600" > /sys/module/cpu_input_boost/parameters/input_boost_freq_hp
+            echo "1401600" > /sys/module/cpu_input_boost/parameters/input_boost_freq_lp
+            echo "60" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            if [ $cpu_freq0 == "633600" ];  then 
+	            echo "0:1747200 1:1747200 2:1747200 3:1747200 4:1747200 5:1747200 6:1747200 7:1747200" > /sys/module/msm_performance/parameters/cpu_max_freq
+            else 
+	            echo "0:1612800 1:1612800 2:1612800 3:1612800 4:1747200 5:1747200 6:1747200 7:1747200" > /sys/module/msm_performance/parameters/cpu_max_freq
+            fi;
+            echo "0:902400 1:902400 2:902400 3:902400 4:1113600 5:1113600 6:1113600 7:1113600" > /sys/module/msm_performance/parameters/cpu_min_freq
+            echo "Y" > /sys/module/sync/parameters/fsync_enabled
+            echo "512" > /proc/sys/kernel/random/read_wakeup_threshold
+            echo "1024" > /proc/sys/kernel/random/write_wakeup_threshold
+            echo "N" > /sys/module/msm_thermal/parameters/enabled
+            echo "10" > /sys/class/kgsl/kgsl-3d0/devfreq/polling_interval
+            echo "0" > /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
+            echo "160000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+            echo "1" > /sys/class/kgsl/kgsl-3d0/throttling
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_clk_on 0
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_bus_on 0
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_rail_on 0
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_no_nap 0
+            echo "50000" > /sys/class/kgsl/kgsl-3d0/idle_timer
+            echo "Y" > /sys/module/adreno_idler/parameters/adreno_idler_active
+            echo "40" > /sys/module/adreno_idler/parameters/adreno_idler_downdifferential
+            echo "24" > /sys/module/adreno_idler/parameters/adreno_idler_idlewait
+            echo "6000" > /sys/module/adreno_idler/parameters/adreno_idler_idleworkload
+            echo "45" > /proc/sys/fs/lease-break-time
+            echo "10" > /dev/stune/schedtune.boost
+            echo "0" > /dev/stune/schedtune.colocate
+            echo "1" > /dev/stune/schedtune.prefer_idle
+            echo "10" > /dev/stune/schedtune.sched_boost
+            echo "0" > /dev/stune/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/schedtune.sched_boost_no_override
+            echo "5" > /dev/stune/background/schedtune.boost
+            echo "0" > /dev/stune/background/schedtune.colocate
+            echo "1" > /dev/stune/background/schedtune.prefer_idle
+            echo "5" > /dev/stune/background/schedtune.sched_boost
+            echo "0" > /dev/stune/background/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/background/schedtune.sched_boost_no_override
+            echo "10" > /dev/stune/foreground/schedtune.boost
+            echo "0" > /dev/stune/foreground/schedtune.colocate
+            echo "1" > /dev/stune/foreground/schedtune.prefer_idle
+            echo "10" > /dev/stune/foreground/schedtune.sched_boost
+            echo "0" > /dev/stune/foreground/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/foreground/schedtune.sched_boost_no_override
+            echo "5" > /dev/stune/rt/schedtune.boost
+            echo "0" > /dev/stune/rt/schedtune.colocate
+            echo "1" > /dev/stune/rt/schedtune.prefer_idle
+            echo "5" > /dev/stune/rt/schedtune.sched_boost
+            echo "0" > /dev/stune/rt/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/rt/schedtune.sched_boost_no_override
+            echo "10" > /dev/stune/top-app/schedtune.boost
+            echo "0" > /dev/stune/top-app/schedtune.colocate
+            echo "1" > /dev/stune/top-app/schedtune.prefer_idle
+            echo "10" > /dev/stune/top-app/schedtune.sched_boost
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_no_override
+            echo "0" > /proc/sys/kernel/sched_autogroup_enabled
+            echo "1" > /proc/sys/kernel/timer_migration
+            echo "100" > /sys/devices/virtual/graphics/fb0/idle_time
+            echo "0" > /sys/module/msm_thermal/core_control/enabled
+            echo "60" > /sys/module/cpu_boost/parameters/input_boost_ms
+            echo "60" > /sys/module/cpu_boost/parameters/input_boost_ms_s2
+            echo "10" > /sys/module/cpu_boost/parameters/dynamic_stune_boost
+            echo "10" > /sys/module/cpu_input_boost/parameters/dynamic_stune_boost
+            echo "60" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            echo "10" > /sys/module/cpu_input_boost/parameters/general_stune_boost
+            echo "60" > /sys/module/dsboost/parameters/input_boost_duration
+            echo "10" > /sys/module/dsboost/parameters/input_stune_boost
+            echo "10" > /sys/module/dsboost/parameters/sched_stune_boost
+            echo "60" > /sys/module/dsboost/parameters/cooldown_boost_duration
+            echo "10" > /sys/module/dsboost/parameters/cooldown_stune_boost
+            echo "0" > /sys/module/msm_performance/parameters/touchboost
+            echo "0" > /sys/module/cpu_boost/parameters/boost_ms
+            echo "N" > /sys/module/cpu_boost/parameters/sched_boost_on_input
+            echo "0" > /sys/power/pnpmgr/touch_boost
+            echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+            echo '1' > /sys/module/mmc_core/parameters/use_spi_crc
+            echo "Y" > /sys/module/workqueue/parameters/power_efficient
+            #setprop debug.egl.force_msaa 0
+            settings put global location_background_throttle_interval_ms "1800000"
+            settings put global wakelock_blocking_enabled "1"
+            settings put global wakelock_blocking_list "BackgroundTaskService-PhotosUnltdBackupTask|BackgroundTaskService-VideoCompressionScheduleTask|BackgroundTaskService-FetchAccountPropsTask|BackgroundTaskService-UpdateFlagsTask|AnyMotionDetector|BackgroundTaskService-PhotosBackupTask|BackgroundTaskService-RegisterSyncPhenotypeTask|BackgroundTaskService-BackupScheduleTask|*gms_scheduler*/com.google.android.gms/.phenotype.service.sync.PhenotypeConfigurator|wake:com.google.firebase.iid.WakeLockHolder|SyncLoopWakeLock|*job*/com.google.android.syncadapters.contacts/.ContactsSyncAdapterJobIntentService|*gms_scheduler*/com.google.android.gms/.ads.social.GcmSchedulerWakeupService|*gms_scheduler*/com.google.android.gms/.ads.jams.NegotiationService"
+            settings put secure location_mode "0"
+            settings put secure location_providers_allowed "gps,network"
+            settings put global low_power "0"
+            settings put global battery_saver_constants "vibration_disabled=false, aod_disabled=false"
+            service call SurfaceFlinger 1008 i32 0
+        };;
+        # Performance
+        "1") {
+            chmod 0644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+            if [ $gov == "schedutil" ];  then 
+	            echo "schedutil" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+	            echo "400" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us
+                echo "38000" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us
+                echo "0" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "alucardsched" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+                echo "2000" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/up_rate_limit_us
+                echo "5000" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/down_rate_limit_us
+                echo "1113600" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/freq_responsiveness
+                echo "10" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/boost_perc
+            fi
+            echo "902400" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+            echo "1843200" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+            chmod 0644 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+            if [ $gov == "schedutil" ];  then 
+	            echo "schedutil" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+	            echo "400" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/up_rate_limit_us
+                echo "36000" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/down_rate_limit_us
+                echo "0" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "alucardsched" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+                echo "2000" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/up_rate_limit_us
+                echo "5000" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/down_rate_limit_us
+                echo "1113600" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/freq_responsiveness
+                echo "10" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/boost_perc
+            fi
+            echo "1113600" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+            if [ $cpu_freq0 == "633600" ];  then 
+	            echo "1958400" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+            else 
+	            echo "1804800" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+            fi;
+            echo "1747200" > /sys/module/cpu_input_boost/parameters/input_boost_freq_hp
+            echo "1536000" > /sys/module/cpu_input_boost/parameters/input_boost_freq_lp
+            echo "120" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            if [ $cpu_freq0 == "633600" ];  then 
+                echo "0:$setmax0 1:$setmax0 2:$setmax0 3:$setmax0 4:$setmax4 5:$setmax4 6:$setmax4 7:$setmax4" > /sys/module/msm_performance/parameters/cpu_max_freq
+            else 
+                echo "0:$setmax0 1:$setmax0 2:$setmax0 3:$setmax0 4:$setmax4 5:$setmax4 6:$setmax4 7:$setmax4" > /sys/module/msm_performance/parameters/cpu_max_freq
+            fi;
+            echo "0:902400 1:902400 2:902400 3:902400 4:1113600 5:1113600 6:1113600 7:1113600" > /sys/module/msm_performance/parameters/cpu_min_freq
+            echo "Y" > /sys/module/sync/parameters/fsync_enabled
+            echo "512" > /proc/sys/kernel/random/read_wakeup_threshold
+            echo "1024" > /proc/sys/kernel/random/write_wakeup_threshold
+            echo "N" > /sys/module/msm_thermal/parameters/enabled
+            echo "5" > /sys/class/kgsl/kgsl-3d0/devfreq/polling_interval
+            echo "1" > /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
+            echo "266000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+            echo "0" > /sys/class/kgsl/kgsl-3d0/throttling
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_clk_on
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_bus_on
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_rail_on
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_no_nap
+            echo "20000" > /sys/class/kgsl/kgsl-3d0/idle_timer
+            echo "Y" > /sys/module/adreno_idler/parameters/adreno_idler_active
+            echo "20" > /sys/module/adreno_idler/parameters/adreno_idler_downdifferential
+            echo "15" > /sys/module/adreno_idler/parameters/adreno_idler_idlewait
+            echo "3000" > /sys/module/adreno_idler/parameters/adreno_idler_idleworkload
+            echo "5" > /proc/sys/fs/lease-break-time
+            echo "35" > /dev/stune/schedtune.boost
+            echo "1" > /dev/stune/schedtune.colocate
+            echo "0" > /dev/stune/schedtune.prefer_idle
+            echo "35" > /dev/stune/schedtune.sched_boost
+            echo "1" > /dev/stune/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/schedtune.sched_boost_no_override
+            echo "35" > /dev/stune/background/schedtune.boost
+            echo "1" > /dev/stune/background/schedtune.colocate
+            echo "0" > /dev/stune/background/schedtune.prefer_idle
+            echo "35" > /dev/stune/background/schedtune.sched_boost
+            echo "1" > /dev/stune/background/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/background/schedtune.sched_boost_no_override
+            echo "35" > /dev/stune/foreground/schedtune.boost
+            echo "1" > /dev/stune/foreground/schedtune.colocate
+            echo "0" > /dev/stune/foreground/schedtune.prefer_idle
+            echo "35" > /dev/stune/foreground/schedtune.sched_boost
+            echo "1" > /dev/stune/foreground/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/foreground/schedtune.sched_boost_no_override
+            echo "35" > /dev/stune/rt/schedtune.boost
+            echo "1" > /dev/stune/rt/schedtune.colocate
+            echo "0" > /dev/stune/rt/schedtune.prefer_idle
+            echo "35" > /dev/stune/rt/schedtune.sched_boost
+            echo "1" > /dev/stune/rt/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/rt/schedtune.sched_boost_no_override
+            echo "35" > /dev/stune/top-app/schedtune.boost
+            echo "1" > /dev/stune/top-app/schedtune.colocate
+            echo "0" > /dev/stune/top-app/schedtune.prefer_idle
+            echo "35" > /dev/stune/top-app/schedtune.sched_boost
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_no_override
+            echo "0" > /proc/sys/kernel/sched_autogroup_enabled
+            echo "1" > /proc/sys/kernel/timer_migration
+            echo "100" > /sys/devices/virtual/graphics/fb0/idle_time
+            echo "0" > /sys/module/msm_thermal/core_control/enabled
+            echo "1" > /sys/module/msm_performance/parameters/touchboost
+            echo "120" > /sys/module/cpu_boost/parameters/input_boost_ms
+            echo "120" > /sys/module/cpu_boost/parameters/input_boost_ms_s2
+            echo "35" > /sys/module/cpu_boost/parameters/dynamic_stune_boost
+            echo "35" > /sys/module/cpu_input_boost/parameters/dynamic_stune_boost
+            echo "120" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            echo "35" > /sys/module/cpu_input_boost/parameters/general_stune_boost
+            echo "120" > /sys/module/dsboost/parameters/input_boost_duration
+            echo "25" > /sys/module/dsboost/parameters/input_stune_boost
+            echo "35" > /sys/module/dsboost/parameters/sched_stune_boost
+            echo "120" > /sys/module/dsboost/parameters/cooldown_boost_duration
+            echo "10" > /sys/module/dsboost/parameters/cooldown_stune_boost
+            echo "1" > /sys/module/msm_performance/parameters/touchboost
+            echo "120" > /sys/module/cpu_boost/parameters/boost_ms
+            echo "1" > /sys/module/cpu_boost/parameters/sched_boost_on_input
+            echo "1" > /sys/power/pnpmgr/touch_boost
+            echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+            echo '1' > /sys/module/mmc_core/parameters/use_spi_crc
+            echo "N" > /sys/module/workqueue/parameters/power_efficient
+            #setprop debug.egl.force_msaa 1
+            settings put global location_background_throttle_interval_ms "600000"
+            settings put global wakelock_blocking_enabled "1"
+            settings put global wakelock_blocking_list "BackgroundTaskService-PhotosUnltdBackupTask|BackgroundTaskService-VideoCompressionScheduleTask|BackgroundTaskService-FetchAccountPropsTask|BackgroundTaskService-UpdateFlagsTask|BackgroundTaskService-PhotosBackupTask|BackgroundTaskService-RegisterSyncPhenotypeTask|BackgroundTaskService-BackupScheduleTask|*gms_scheduler*/com.google.android.gms/.phenotype.service.sync.PhenotypeConfigurator|wake:com.google.firebase.iid.WakeLockHolder|*gms_scheduler*/com.google.android.gms/.ads.social.GcmSchedulerWakeupService|*gms_scheduler*/com.google.android.gms/.ads.jams.NegotiationService"
+            settings put secure location_mode "0"
+            settings put secure location_providers_allowed "gps,network"
+            settings put global low_power "0"
+            settings put global battery_saver_constants "vibration_disabled=false, aod_disabled=false"
+            service call SurfaceFlinger 1008 i32 1
+        };;
+        # Battery
+        "2") {
+            chmod 0644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+            if [ $gov == "powersave" ];  then 
+	            echo "powersave" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+	            echo "3000" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us
+                echo "1000" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us
+                echo "0" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "alucardsched" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+                echo "3000" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/up_rate_limit_us
+                echo "1000" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/down_rate_limit_us
+                echo "902400" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/freq_responsiveness
+                echo "0" > /sys/devices/system/cpu/cpu0/cpufreq/alucardsched/boost_perc
+            fi
+            echo "902400" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+            echo "1401600" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+            chmod 0644 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+            if [ $gov == "powersave" ];  then 
+	            echo "powersave" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+	            echo "3000" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/up_rate_limit_us
+                echo "1000" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/down_rate_limit_us
+                echo "0" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "alucardsched" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+                echo "3000" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/up_rate_limit_us
+                echo "1000" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/down_rate_limit_us
+                echo "1113600" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/freq_responsiveness
+                echo "0" > /sys/devices/system/cpu/cpu4/cpufreq/alucardsched/boost_perc
+            fi
+            echo "1113600" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+            echo "1401600" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+            echo "0" > /sys/module/cpu_input_boost/parameters/input_boost_freq_hp
+            echo "0" > /sys/module/cpu_input_boost/parameters/input_boost_freq_lp
+            echo "0" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            echo "0:1401600 1:1401600 2:1401600 3:1401600 4:1401600 5:1401600 6:1401600 7:1401600" > /sys/module/msm_performance/parameters/cpu_max_freq
+            echo "0:902400 1:902400 2:902400 3:902400 4:1113600 5:1113600 6:1113600 7:1113600" > /sys/module/msm_performance/parameters/cpu_min_freq
+            echo "Y" > /sys/module/sync/parameters/fsync_enabled
+            echo "64" > /proc/sys/kernel/random/read_wakeup_threshold
+            echo "896" > /proc/sys/kernel/random/write_wakeup_threshold
+            echo "N" > /sys/module/msm_thermal/parameters/enabled
+            echo "10" > /sys/class/kgsl/kgsl-3d0/devfreq/polling_interval
+            echo "0" > /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
+            echo "160000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+            echo "1" > /sys/class/kgsl/kgsl-3d0/throttling
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_clk_on
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_bus_on
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_rail_on
+            echo "0" > /sys/class/kgsl/kgsl-3d0/force_no_nap
+            echo "50000" > /sys/class/kgsl/kgsl-3d0/idle_timer
+            echo "Y" > /sys/module/adreno_idler/parameters/adreno_idler_active
+            echo "40" > /sys/module/adreno_idler/parameters/adreno_idler_downdifferential
+            echo "24" > /sys/module/adreno_idler/parameters/adreno_idler_idlewait
+            echo "10000" > /sys/module/adreno_idler/parameters/adreno_idler_idleworkload
+            echo "0" > /proc/sys/fs/lease-break-time
+            echo "0" > /dev/stune/schedtune.boost
+            echo "0" > /dev/stune/schedtune.colocate
+            echo "1" > /dev/stune/schedtune.prefer_idle
+            echo "0" > /dev/stune/schedtune.sched_boost
+            echo "0" > /dev/stune/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/schedtune.sched_boost_no_override
+            echo "0" > /dev/stune/background/schedtune.boost
+            echo "0" > /dev/stune/background/schedtune.colocate
+            echo "1" > /dev/stune/background/schedtune.prefer_idle
+            echo "0" > /dev/stune/background/schedtune.sched_boost
+            echo "0" > /dev/stune/background/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/background/schedtune.sched_boost_no_override
+            echo "0" > /dev/stune/foreground/schedtune.boost
+            echo "0" > /dev/stune/foreground/schedtune.colocate
+            echo "1" > /dev/stune/foreground/schedtune.prefer_idle
+            echo "0" > /dev/stune/foreground/schedtune.sched_boost
+            echo "0" > /dev/stune/foreground/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/foreground/schedtune.sched_boost_no_override
+            echo "0" > /dev/stune/rt/schedtune.boost
+            echo "0" > /dev/stune/rt/schedtune.colocate
+            echo "1" > /dev/stune/rt/schedtune.prefer_idle
+            echo "0" > /dev/stune/rt/schedtune.sched_boost
+            echo "0" > /dev/stune/rt/schedtune.sched_boost_enabled
+            echo "0" > /dev/stune/rt/schedtune.sched_boost_no_override
+            echo "0" > /dev/stune/top-app/schedtune.boost
+            echo "0" > /dev/stune/top-app/schedtune.colocate
+            echo "1" > /dev/stune/top-app/schedtune.prefer_idle
+            echo "0" > /dev/stune/top-app/schedtune.sched_boost
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_no_override
+            echo "0" > /proc/sys/kernel/sched_autogroup_enabled
+            echo "1" > /proc/sys/kernel/timer_migration
+            echo "100" > /sys/devices/virtual/graphics/fb0/idle_time
+            echo "0" > /sys/module/msm_thermal/core_control/enabled
+            echo "1" > /sys/module/msm_performance/parameters/touchboost
+            echo "0" > /sys/module/dsboost/parameters/input_stune_boost
+            echo "0" > /sys/module/dsboost/parameters/sched_stune_boost
+            echo "0" > /sys/module/cpu_boost/parameters/input_boost_ms
+            echo "0" > /sys/module/cpu_boost/parameters/input_boost_ms_s2
+            echo "0" > /sys/module/cpu_boost/parameters/dynamic_stune_boost
+            echo "0" > /sys/module/cpu_input_boost/parameters/dynamic_stune_boost
+            echo "0" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            echo "0" > /sys/module/cpu_input_boost/parameters/general_stune_boost
+            echo "0" > /sys/module/dsboost/parameters/input_boost_duration
+            echo "0" > /sys/module/dsboost/parameters/input_stune_boost
+            echo "0" > /sys/module/dsboost/parameters/sched_stune_boost
+            echo "0" > /sys/module/dsboost/parameters/cooldown_boost_duration
+            echo "0" > /sys/module/dsboost/parameters/cooldown_stune_boost
+            echo "0" > /sys/module/msm_performance/parameters/touchboost
+            echo "0" > /sys/module/cpu_boost/parameters/boost_ms
+            echo "N" > /sys/module/cpu_boost/parameters/sched_boost_on_input
+            echo "0" > /sys/power/pnpmgr/touch_boost
+            echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+            echo "0" > echo '1' > /sys/module/mmc_core/parameters/use_spi_crc
+            echo "Y" > /sys/module/workqueue/parameters/power_efficient
+            #setprop debug.egl.force_msaa 0
+            settings put global location_background_throttle_interval_ms "3600000"
+            settings put global wakelock_blocking_enabled "1"
+            settings put global wakelock_blocking_list "BackgroundTaskService-PhotosUnltdBackupTask|BackgroundTaskService-VideoCompressionScheduleTask|BackgroundTaskService-FetchAccountPropsTask|BackgroundTaskService-UpdateFlagsTask|AnyMotionDetector|BackgroundTaskService-PhotosBackupTask|BackgroundTaskService-RegisterSyncPhenotypeTask|BackgroundTaskService-BackupScheduleTask|wake:com.google.android.gms/.checkin.CheckinService|*gms_scheduler*/com.google.android.gms/.phenotype.service.sync.PhenotypeConfigurator|wake:com.google.firebase.iid.WakeLockHolder|NlpCollectorWakeLock|*location*|SyncLoopWakeLock|NlpWakeLock|*job*/com.google.android.syncadapters.contacts/.ContactsSyncAdapterJobIntentService|*gms_scheduler*/com.google.android.gms/.ads.social.GcmSchedulerWakeupService|*gms_scheduler*/com.google.android.gms/.ads.jams.NegotiationService"
+            settings put secure location_mode "0"
+            settings put secure location_providers_allowed ""
+            settings put global low_power "0"
+            settings put global battery_saver_constants "vibration_disabled=false"
+            service call SurfaceFlinger 1008 i32 0
+        };;
+        # Gaming
+        "3") {
+            chmod 0644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+            if [ $gov == "schedutil" ];  then 
+	            echo "schedutil" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+	            echo "400" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us
+                echo "38000" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us
+                echo "0" > /sys/devices/system/cpu/cpu0/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "blu_schedutil" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+                echo "400" > /sys/devices/system/cpu/cpu0/cpufreq/blu_schedutil/up_rate_limit_us
+                echo "36000" > /sys/devices/system/cpu/cpu0/cpufreq/blu_schedutil/down_rate_limit_us
+                echo "1" > /sys/devices/system/cpu/cpu0/cpufreq/blu_schedutil/iowait_boost_enable
+            fi
+            chmod 0644 /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+            if [ $gov == "schedutil" ];  then 
+	            echo "schedutil" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+	            echo "400" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/up_rate_limit_us
+                echo "38000" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/down_rate_limit_us
+                echo "1" > /sys/devices/system/cpu/cpu4/cpufreq/schedutil/iowait_boost_enable
+                    else 
+                echo "schedutil" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor
+                echo "400" > /sys/devices/system/cpu/cpu4/cpufreq/blu_schedutil/up_rate_limit_us
+                echo "36000" > /sys/devices/system/cpu/cpu4/cpufreq/blu_schedutil/down_rate_limit_us
+                echo "1" > /sys/devices/system/cpu/cpu4/cpufreq/blu_schedutil/iowait_boost_enable
+            fi
+            echo "1113600" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+            echo "$setmax4" > /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+            echo "1804800" > /sys/module/cpu_input_boost/parameters/input_boost_freq_hp
+            echo "1536000" > /sys/module/cpu_input_boost/parameters/input_boost_freq_lp
+            echo "300" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            echo "0:$setmax0 1:$setmax0 2:$setmax0 3:$setmax0 4:$setmax4 5:$setmax4 6:$setmax4 7:$setmax4" > /sys/module/msm_performance/parameters/cpu_max_freq
+            echo "0:1113600 1:1113600 2:1113600 3:1113600 4:1113600 5:1113600 6:1113600 7:1113600" > /sys/module/msm_performance/parameters/cpu_min_freq
+            echo "Y" > /sys/module/sync/parameters/fsync_enabled
+            echo "1024" > /proc/sys/kernel/random/read_wakeup_threshold
+            echo "2048" > /proc/sys/kernel/random/write_wakeup_threshold
+            echo "N" > /sys/module/msm_thermal/parameters/enabled
+            echo "5" > /sys/class/kgsl/kgsl-3d0/devfreq/polling_interval
+            echo "3" > /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
+            echo "370000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+            echo "0" > /sys/class/kgsl/kgsl-3d0/throttling
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_clk_on
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_bus_on
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_rail_on
+            echo "1" > /sys/class/kgsl/kgsl-3d0/force_no_nap
+            echo "5000" > /sys/class/kgsl/kgsl-3d0/idle_timer
+            echo "N" > /sys/module/adreno_idler/parameters/adreno_idler_active
+            echo "20" > /sys/module/adreno_idler/parameters/adreno_idler_downdifferential
+            echo "15" > /sys/module/adreno_idler/parameters/adreno_idler_idlewait
+            echo "5" > /sys/module/adreno_idler/parameters/adreno_idler_idleworkload
+            echo "5" > /proc/sys/fs/lease-break-time
+            echo "40" > /dev/stune/schedtune.boost
+            echo "1" > /dev/stune/schedtune.colocate
+            echo "0" > /dev/stune/schedtune.prefer_idle
+            echo "40" > /dev/stune/schedtune.sched_boost
+            echo "1" > /dev/stune/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/schedtune.sched_boost_no_override
+            echo "15" > /dev/stune/background/schedtune.boost
+            echo "1" > /dev/stune/background/schedtune.colocate
+            echo "0" > /dev/stune/background/schedtune.prefer_idle
+            echo "40" > /dev/stune/background/schedtune.sched_boost
+            echo "1" > /dev/stune/background/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/background/schedtune.sched_boost_no_override
+            echo "40" > /dev/stune/foreground/schedtune.boost
+            echo "1" > /dev/stune/foreground/schedtune.colocate
+            echo "0" > /dev/stune/foreground/schedtune.prefer_idle
+            echo "50" > /dev/stune/foreground/schedtune.sched_boost
+            echo "1" > /dev/stune/foreground/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/foreground/schedtune.sched_boost_no_override
+            echo "10" > /dev/stune/rt/schedtune.boost
+            echo "1" > /dev/stune/rt/schedtune.colocate
+            echo "0" > /dev/stune/rt/schedtune.prefer_idle
+            echo "40" > /dev/stune/rt/schedtune.sched_boost
+            echo "1" > /dev/stune/rt/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/rt/schedtune.sched_boost_no_override
+            echo "40" > /dev/stune/top-app/schedtune.boost
+            echo "1" > /dev/stune/top-app/schedtune.colocate
+            echo "0" > /dev/stune/top-app/schedtune.prefer_idle
+            echo "50" > /dev/stune/top-app/schedtune.sched_boost
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_enabled
+            echo "1" > /dev/stune/top-app/schedtune.sched_boost_no_override
+            echo "0" > /proc/sys/kernel/sched_autogroup_enabled
+            echo "1" > /proc/sys/kernel/timer_migration
+            echo "100" > /sys/devices/virtual/graphics/fb0/idle_time
+            echo "0" > /sys/module/msm_thermal/core_control/enabled
+            echo "1" > /sys/module/msm_performance/parameters/touchboost
+            echo "290" > /sys/module/cpu_boost/parameters/input_boost_ms
+            echo "290" > /sys/module/cpu_boost/parameters/input_boost_ms_s2
+            echo "40" > /sys/module/cpu_boost/parameters/dynamic_stune_boost
+            echo "40" > /sys/module/cpu_input_boost/parameters/dynamic_stune_boost
+            echo "290" > /sys/module/cpu_input_boost/parameters/input_boost_duration
+            echo "40" > /sys/module/cpu_input_boost/parameters/general_stune_boost
+            echo "290" > /sys/module/dsboost/parameters/input_boost_duration
+            echo "40" > /sys/module/dsboost/parameters/input_stune_boost
+            echo "40" > /sys/module/dsboost/parameters/sched_stune_boost
+            echo "290" > /sys/module/dsboost/parameters/cooldown_boost_duration
+            echo "8" > /sys/module/dsboost/parameters/cooldown_stune_boost
+            echo "1" > /sys/module/msm_performance/parameters/touchboost
+            echo "290" > /sys/module/cpu_boost/parameters/boost_ms
+            echo "1" > /sys/module/cpu_boost/parameters/sched_boost_on_input
+            echo "1" > /sys/power/pnpmgr/touch_boost
+            echo "0" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+            echo '0' > /sys/module/mmc_core/parameters/use_spi_crc
+            #setprop debug.egl.force_msaa 1
+            settings put global location_background_throttle_interval_ms "600000"
+            settings put global wakelock_blocking_enabled "1"
+            settings put global wakelock_blocking_list "BackgroundTaskService-PhotosUnltdBackupTask|BackgroundTaskService-VideoCompressionScheduleTask|BackgroundTaskService-FetchAccountPropsTask|BackgroundTaskService-UpdateFlagsTask|BackgroundTaskService-PhotosBackupTask|BackgroundTaskService-RegisterSyncPhenotypeTask|BackgroundTaskService-BackupScheduleTask|*gms_scheduler*/com.google.android.gms/.phenotype.service.sync.PhenotypeConfigurator|wake:com.google.firebase.iid.WakeLockHolder|*gms_scheduler*/com.google.android.gms/.ads.social.GcmSchedulerWakeupService|*gms_scheduler*/com.google.android.gms/.ads.jams.NegotiationService"
+            settings put secure location_mode "0"
+            settings put secure location_providers_allowed "gps,network"
+            settings put global low_power "0"
+            settings put global battery_saver_constants "vibration_disabled=false, aod_disabled=false"
+            service call SurfaceFlinger 1008 i32 1
+        };;
+        # else do nothing
+    esac
+done
